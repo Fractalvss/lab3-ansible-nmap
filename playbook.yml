@@ -1,0 +1,31 @@
+---
+- name: Install NMAP and scan targets
+  hosts: webservers
+  become: true
+  vars:
+    targets_file: targets.txt
+  tasks:
+    - name: Install NMAP
+      ansible.builtin.apt:
+        name: nmap
+        state: present
+        update_cache: yes
+
+    - name: Read targets from file
+      ansible.builtin.set_fact:
+        target_list: "{{ lookup('file', targets_file).splitlines() }}"
+
+    - name: Show targets list
+      ansible.builtin.debug:
+        msg: "Scanning targets: {{ target_list }}"
+
+    - name: Scan each target with NMAP
+      ansible.builtin.shell: nmap -p 80 -Pn {{ item }}
+      loop: "{{ target_list }}"
+      register: scan_results
+      ignore_errors: yes
+
+    - name: Display scan results
+      ansible.builtin.debug:
+        msg: "Result for {{ item.item }}:\n{{ item.stdout }}"
+      loop: "{{ scan_results.results }}"
